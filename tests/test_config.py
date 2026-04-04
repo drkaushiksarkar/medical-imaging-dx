@@ -1,28 +1,54 @@
-from cnn_skin_cancer.config import TrainingConfig, load_config
+"""Tests for application configuration."""
+import os
+import pytest
+from config import AppConfig, DatabaseConfig, S3Config, CacheConfig
 
 
-def test_load_config_roundtrip(tmp_path):
-    cfg_path = tmp_path / "cfg.yaml"
-    cfg_path.write_text(
-        """
-seed: 1
-img_height: 64
-img_width: 64
-batch_size: 4
-epochs: 2
-dropout: 0.1
-backbone: custom
-classes: [a, b]
-paths:
-  train_dir: data/train
-  val_dir: data/val
-  out_dir: runs
-optimizer: {name: RMSprop, lr: 0.0001}
-augment: {flip_left_right: false}
-        """
-    )
-    cfg = load_config(cfg_path)
-    assert isinstance(cfg, TrainingConfig)  # nosec B101 - pytest assertion
-    dumped = cfg.model_dump()
-    assert dumped["img_height"] == 64  # nosec B101 - test assertion
-    assert dumped["classes"] == ["a", "b"]  # nosec B101 - test assertion
+class TestDatabaseConfig:
+    def test_defaults(self):
+        cfg = DatabaseConfig()
+        assert cfg.host == "localhost"
+        assert cfg.port == 5432
+        assert cfg.pool_size == 10
+
+    def test_connection_string(self):
+        cfg = DatabaseConfig(host="db.example.com", port=5432, name="testdb", user="admin", password="secret")
+        cs = cfg.connection_string
+        assert "db.example.com" in cs
+        assert "admin:secret" in cs
+        assert "testdb" in cs
+
+
+class TestS3Config:
+    def test_defaults(self):
+        cfg = S3Config()
+        assert cfg.bucket == "imacs-mm-foundation-data-prod"
+        assert cfg.region == "us-east-1"
+
+
+class TestAppConfig:
+    def test_defaults(self):
+        cfg = AppConfig()
+        assert cfg.env == "production"
+        assert cfg.debug is False
+        assert cfg.log_level == "INFO"
+
+    def test_from_env(self, monkeypatch):
+        monkeypatch.setenv("APP_ENV", "staging")
+        monkeypatch.setenv("APP_DEBUG", "true")
+        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+        monkeypatch.setenv("DB_HOST", "staging-db")
+        monkeypatch.setenv("DB_PORT", "5433")
+        monkeypatch.setenv("S3_BUCKET", "test-bucket")
+        cfg = AppConfig.from_env()
+        assert cfg.env == "staging"
+        assert cfg.debug is True
+        assert cfg.log_level == "DEBUG"
+        assert cfg.database.host == "staging-db"
+        assert cfg.database.port == 5433
+        assert cfg.s3.bucket == "test-bucket"
+
+    def test_cache_config(self):
+        cfg = CacheConfig()
+        assert cfg.enabled is True
+        assert cfg.memory_size == 1024
