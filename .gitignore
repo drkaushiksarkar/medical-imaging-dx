@@ -1,19 +1,23 @@
-# Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
 *.egg-info/
-.venv/
-.ENV/
+.eggs/
+*.egg
 .env
+.venv/
+venv/
 .pytest_cache/
-.ipynb_checkpoints/
-
-# Artifacts
-runs/
-assets/confusion_matrix.png
-data/
-frontend/node_modules/
-frontend/dist/
-
-# OS
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.log
 .DS_Store
+*.db
+*.sqlite3
